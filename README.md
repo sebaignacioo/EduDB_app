@@ -21,6 +21,12 @@ Para el desarrollo de este código, se utilizó **PyCharm** como IDE local.
 Programa de ejemplo que permite mostrar datos de utilidad desde la base de datos armada en el proyecto, utilizando 
 los conceptos aprendidos en clases.
 
+## Modelo Entidad-Relación
+![MER](/img/mer.png?raw=true)
+
+## Modelo relacional
+![MR](/img/mr.png?raw=true)
+
 ## Capturas de pantalla
 ![Captura 1](/img/sc1.png?raw=true)
 

@@ -17,7 +17,7 @@ class EduDBConnection:
                 'database': 'EduDB'
             }
         else:
-            # Reemplazar por credenciales correctas.
+            # Agregar credenciales correctas.
             self._credentials = {
                 'host': 'localhost',
                 'user': 'root',
