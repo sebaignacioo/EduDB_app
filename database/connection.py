@@ -4,16 +4,26 @@ from database.models import Alumno, Apoderado, Asignatura, Asistencia, Clase, Cu
 
 
 class EduDBConnection:
-    _credentials = {
-        'host': 'localhost',
-        'user': 'root',
-        'password': 'ZFgpZmdfpvxXP2Rr',
-        'database': 'EduDB'
-    }
 
+    _credentials: dict[str, str]
     _con: connection
 
-    def __init__(self):
+    def __init__(self, local: bool = False):
+        if local:
+            self._credentials = {
+                'host': 'localhost',
+                'user': 'root',
+                'password': 'ZFgpZmdfpvxXP2Rr',
+                'database': 'EduDB'
+            }
+        else:
+            # Reemplazar por credenciales correctas.
+            self._credentials = {
+                'host': 'localhost',
+                'user': 'root',
+                'password': 'ZFgpZmdfpvxXP2Rr',
+                'database': 'EduDB'
+            }
         self._con = connect(
             host=self._credentials.get('host'),
             user=self._credentials.get('user'),
@@ -21,13 +31,26 @@ class EduDBConnection:
             database=self._credentials.get('database')
         )
 
-    def ex_insert(self, sql: str, val: tuple):
+    def ex_insert(self, sql: str, val: tuple = ()):
         cursor = self._con.cursor()
-        cursor.execute(sql, val)
+        if len(val) > 0:
+            cursor.execute(sql, val)
+        else:
+            cursor.execute(sql)
         self._con.commit()
         id_gen = cursor.lastrowid
         cursor.close()
         return id_gen
+
+    def ex_select(self, sql: str, val: tuple = ()):
+        cursor = self._con.cursor()
+        if len(val) > 0:
+            cursor.execute(sql, val)
+        else:
+            cursor.execute(sql)
+        res = cursor.fetchall()
+        cursor.close()
+        return res
 
     def insert_persona(self, persona: Persona):
         if persona.segundo_nombre is None and persona.apellido_materno is None:
@@ -75,7 +98,6 @@ class EduDBConnection:
         asignatura.codAsig = self.ex_insert(sql, values)
 
     def insert_asistencia(self, asistencia: Asistencia):
-        print(asistencia.valor_asist)
         sql = f'INSERT INTO Asistencia (codClase, rutAlumno, valorAsist, justificado, hizoRetiro)' \
               f'VALUES (%s, %s, %s, %s, %s)'
         values = (f'{asistencia.cod_clase}', f'{asistencia.rut_alumno}', asistencia.valor_asist,
@@ -103,3 +125,66 @@ class EduDBConnection:
             sql = f'INSERT INTO Telefono (numTel, rutPersona) VALUES (%s, %s)'
             values = (tel, rut_persona)
             self.ex_insert(sql, values)
+
+    def obtener_alumnos_curso(self, nivel: int, paralelo: chr):
+        sql = """SELECT
+                  Alumno.rut,
+                  Alumno.nivel,
+                  Alumno.paralelo,
+                  Persona.primerNombre,
+                  Persona.segundoNombre,
+                  Persona.apellidoPat,
+                  Persona.apellidoMat,
+                  Alumno.rutApoderado
+              FROM (
+                  Alumno JOIN Persona
+                  ON Alumno.rut = Persona.rut
+              )
+              WHERE Alumno.nivel = %s
+              AND Alumno.paralelo = %s"""
+        values = (nivel, paralelo)
+        return self.ex_select(sql, values)
+
+    def obtener_apoderados_colegio(self):
+        sql = """SELECT
+                  Apoderado.rut,
+                  Persona.primerNombre,
+                  Persona.segundoNombre,
+                  Persona.apellidoPat,
+                  Persona.apellidoMat
+              FROM (
+                  Apoderado JOIN Persona
+                  ON Apoderado.rut = Persona.rut
+              )"""
+        return self.ex_select(sql)
+
+    def obtener_alumno(self, rut_alumno: str):
+        sql = """SELECT
+        Alumno.rut, Alumno.rutApoderado, Alumno.nivel, Alumno.paralelo, 
+        Persona.primerNombre, Persona.segundoNombre, Persona.apellidoPat, Persona.apellidoMat,
+        AVG(Asistencia.valorAsist)
+        FROM (
+            (Alumno JOIN Persona on Alumno.rut = Persona.rut)
+            JOIN Asistencia on Alumno.rut = Asistencia.rutAlumno
+        )
+        WHERE Alumno.rut = %s
+        """
+        values = (rut_alumno, )
+        alumno = self.ex_select(sql, values)[0]
+        return alumno
+
+    def obtener_alumnos_injustificados(self, nivel: int):
+        sql = """SELECT
+Clase.fechaClase, Alumno.rut, Alumno.paralelo, Persona.primerNombre,
+Persona.segundoNombre, Persona.apellidoPat, Persona.apellidoMat
+FROM (
+    (Alumno JOIN Persona on Alumno.rut = Persona.rut)
+    JOIN Asistencia on Alumno.rut = Asistencia.rutAlumno
+    ), Clase
+WHERE Clase.codClase = Asistencia.codClase
+AND Asistencia.valorAsist = 0
+AND Asistencia.justificado = false
+AND Alumno.nivel = %s
+ORDER BY Clase.fechaClase ASC"""
+        values = (nivel, )
+        return self.ex_select(sql, values)

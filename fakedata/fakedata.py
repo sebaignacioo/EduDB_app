@@ -4,6 +4,7 @@ from database.models import Persona, Apoderado, Alumno, Profesor, Curso, Clase, 
 
 def generate_curso():
     edudb_conn = EduDBConnection()
+    al: Alumno = None
 
     asignaturas: list[list] = [[], []]
 
@@ -31,3 +32,4 @@ def generate_curso():
                     for alumno in curso.alumnos:
                         asis = Asistencia(cl.cod_clase, alumno.rut)
                         edudb_conn.insert_asistencia(asis)
+    return al
